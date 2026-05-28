@@ -139,23 +139,25 @@ def build_dashboard(df_district, df_ep, egg_def):
         hovertemplate="%{x}年<br>蛋白區: %{y:,} 筆<extra></extra>"
     ), row=3, col=1)
 
-    # Layout polish
+    # Layout polish - clean title + avoid overlap with legend
     fig.update_layout(
-        height=920,
+        height=880,
         template="plotly_white",
         showlegend=True,
         legend=dict(
-            orientation="h",
-            yanchor="bottom", y=1.02,
-            xanchor="right", x=1,
-            font=dict(size=11)
+            orientation="v",           # vertical legend on the right side
+            yanchor="top", y=0.98,
+            xanchor="left", x=1.02,
+            font=dict(size=10),
+            bgcolor="rgba(255,255,255,0.85)",
+            bordercolor="#ddd",
+            borderwidth=0.5
         ),
-        margin=dict(l=55, r=35, t=30, b=50),
+        margin=dict(l=55, r=130, t=45, b=45),   # extra right margin for vertical legend
         title=dict(
-            text="<b>2015–2025 蛋黃區 vs 蛋白區 單價中位數變化</b><br>"
-                 "<span style='font-size:12.5px; color:#444'>打炒房 + 升息後，市中心精華區跟外圍區的房價差距，是縮小了還是拉大了？</span>",
+            text="<b>2015–2025 蛋黃區 vs 蛋白區 單價中位數變化</b>",
             x=0.5, xanchor="center",
-            font=dict(size=17, color="#1D3557")
+            font=dict(size=18, color="#1D3557")
         ),
         hovermode="x unified"
     )
@@ -178,14 +180,14 @@ def build_dashboard(df_district, df_ep, egg_def):
     fig.add_annotation(
         text="<b>紅線 = 蛋黃區（9區，預先固定）</b><br>大安、中正、松山、中山、信義、<br>南港、大同、士林、內湖<br>（2015-2017 基期就決定好了）",
         xref="paper", yref="paper",
-        x=0.015, y=0.965,
+        x=0.015, y=0.99,
         showarrow=False,
-        font=dict(size=9.5, color="#222"),
+        font=dict(size=9.2, color="#222"),
         align="left",
         bordercolor="#E63946",
         borderwidth=1.5,
-        borderpad=5,
-        bgcolor="rgba(255,250,250,0.95)"
+        borderpad=4,
+        bgcolor="rgba(255,250,250,0.96)"
     )
 
     # ========== CONVERT TO HTML + ADD CUSTOM INTERACTIVITY ==========
@@ -334,14 +336,21 @@ window.addEventListener('load', () => {{
 </div>
 """
 
+    # Subtitle (moved outside Plotly to avoid overlapping the legend)
+    subtitle_html = """
+<div style="max-width:1100px; margin: 4px auto 6px; padding:0 4px; font-size:13px; color:#444; font-family: system-ui, -apple-system, sans-serif;">
+    打炒房 + 升息後，市中心精華區跟外圍區的房價差距，是縮小了還是拉大了？
+</div>
+"""
+
     # Add a very clear one-sentence takeaway banner
     takeaway_html = """
-<div style="max-width:1100px; margin: 10px auto 4px; padding:8px 14px; background:#FFF4E6; border:1px solid #FFB347; border-radius:5px; font-size:13px; color:#5C3D00; font-family: system-ui, -apple-system, sans-serif;">
+<div style="max-width:1100px; margin: 6px auto 8px; padding:8px 14px; background:#FFF4E6; border:1px solid #FFB347; border-radius:5px; font-size:13px; color:#5C3D00; font-family: system-ui, -apple-system, sans-serif;">
     <b>最簡單的看圖重點：</b> 2022 年以後，如果你發現紅色的蛋黃區線繼續明顯上升、藍色的蛋白區線比較平 → 這就是「區域落差不減反增」的證據。
 </div>
 """
 
-    return takeaway_html + controls_html + js_code + source_html
+    return subtitle_html + takeaway_html + controls_html + js_code + source_html
 
 
 def main():
