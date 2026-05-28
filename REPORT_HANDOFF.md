@@ -145,3 +145,46 @@
 需要我現在先產哪一塊？（例如先把所有圖的程式碼 + 說明一次給完）
 
 繼續執行中...（我會用工具繼續產生更多圖和文字）
+
+---
+
+## 七、互動式報表（新增需求，已完成）
+
+**檔案**：`interactive_housing_report.html`（單一自包含 HTML，約 4.9MB）
+
+**特色**
+- 直接雙擊用瀏覽器開啟，**完全離線可用**，提交最方便
+- 主圖：三聯圖（單價時間序列 + 差距曲線 + 成交量長條）
+- 內建 2022 升息斷點虛線 + 蛋黃區定義醒目標註
+- **即時多選行政區比較**：預設勾選全部 9 個蛋黃區，可再勾選板橋、永和、三重等蛋白區，即時在主圖疊加走勢線
+- Hover 顯示精確數值、範圍滑桿、縮放、拍照（內建 Plotly 工具列）
+- 底部清楚寫明「預先固定定義 + 資料來源 + 樣本數」，完全符合手冊精神
+
+**如何使用**
+1. 把 `interactive_housing_report.html` 複製到任何地方
+2. 直接用 Chrome / Edge / Firefox 開啟
+3. 勾選/取消勾選行政區，即時觀察個別區走勢與總體蛋黃/蛋白的差異
+4. 可直接用工具列的「拍照」按鈕輸出高解析 PNG 放進報告或 PPT
+
+**與靜態報告的搭配建議**
+- 靜態 Figure 1、2 繼續用 matplotlib 精修版（畫質可控）
+- 互動式報表作為「探索與佐證」補充，可放在報告附錄或 PPT 結尾 demo
+- 教授問到「你有做互動嗎？」時，這一檔直接秒殺
+
+**已遵守的原則**
+- 嚴格使用 `egg_yolk_definition.json` 裡預先固定的 9 區
+- 沒有事後挑選、沒有 geocoding
+- 所有互動都建立在乾淨的 `district_yearly_stats.csv` 之上
+
+---
+
+**目前完整交付清單（2026-05-28 更新）**
+- `REPORT_HANDOFF.md`（本文件）
+- `egg_yolk_definition.json` + `base_period_ranking.csv`
+- `yearly_egg_yolk_stats.csv`（原始）
+- `district_yearly_stats.csv` + `egg_protein_yearly.csv`（互動式專用，乾淨版）
+- `figures/figure1_timeseries.png`、`figure2_before_after.png`（需重跑修正版）
+- `interactive_housing_report.html`（**新增**）
+- `prepare_interactive_data.py`、`generate_interactive_report.py`（可重現用）
+
+你現在可以直接把 `interactive_housing_report.html` 打開玩看看，告訴我是否要調整配色、預設勾選的區、增加其他指標，或再加一頁「敏感度分析」的互動視圖。
