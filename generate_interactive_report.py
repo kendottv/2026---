@@ -38,7 +38,9 @@ EGG_INDIV_COLORS = {
     "內湖區": "#FFB703",
 }
 
-# Some protein colors for optional checkboxes
+# Protein districts available for comparison + their colors
+PRIORITY_PROTEIN = ["板橋區", "永和區", "三重區", "中和區", "新店區", "淡水區", "林口區"]
+
 PROTEIN_COLORS = {
     "板橋區": "#264653",
     "永和區": "#2A9D8F",
@@ -74,14 +76,25 @@ def load_data():
             "count": sub["交易筆數"].tolist(),
         }
 
+    # Individual protein districts data (for toggling)
+    protein_individuals = {}
+    for dist in PRIORITY_PROTEIN:
+        sub = df_d[df_d["行政區"] == dist].sort_values("年份")
+        if len(sub) > 0:
+            protein_individuals[dist] = {
+                "years": sub["年份"].tolist(),
+                "price": sub["單價中位數"].tolist(),
+                "count": sub["交易筆數"].tolist(),
+            }
+
     # Protein lookup for gaps
     prot_price_by_year = dict(zip(prot_agg["年份"], prot_agg["單價中位數"]))
     egg_price_by_year = dict(zip(egg_agg["年份"], egg_agg["單價中位數"]))
 
-    return egg_agg, prot_agg, egg_individuals, egg_price_by_year, prot_price_by_year, egg_districts, egg_def
+    return egg_agg, prot_agg, egg_individuals, protein_individuals, egg_price_by_year, prot_price_by_year, egg_districts, egg_def
 
 
-def build_dashboard(egg_agg, prot_agg, egg_individuals, egg_price_by_year, prot_price_by_year, egg_districts, egg_def):
+def build_dashboard(egg_agg, prot_agg, egg_individuals, protein_individuals, egg_price_by_year, prot_price_by_year, egg_districts, egg_def):
     years = egg_agg["年份"].tolist()
 
     fig = make_subplots(
@@ -158,6 +171,37 @@ def build_dashboard(egg_agg, prot_agg, egg_individuals, egg_price_by_year, prot_
         fig.add_trace(trace, row=1, col=1)
         individual_trace_indices[dist] = len(fig.data) - 1
 
+    # === Pre-add priority protein district lines (hidden by default) ===
+    for dist in PRIORITY_PROTEIN:
+        if dist not in protein_individuals:
+            continue
+        data = protein_individuals[dist]
+        color = PROTEIN_COLORS.get(dist, "#457B9D")
+
+        hover_texts = []
+        for i, y in enumerate(data["years"]):
+            p = data["price"][i]
+            c = data["count"][i]
+            hover_texts.append(
+                f"<b>{dist}</b><br>{int(y)}年<br>"
+                f"單價中位數: <b>{p:,.0f}</b> 元/坪<br>"
+                f"交易筆數: {c:,} 筆"
+            )
+
+        trace = go.Scatter(
+            x=data["years"],
+            y=data["price"],
+            mode="lines+markers",
+            name=dist,
+            line=dict(color=color, width=2, dash="dot"),
+            marker=dict(size=5),
+            hovertext=hover_texts,
+            hoverinfo="text",
+            visible=False  # Hidden by default
+        )
+        fig.add_trace(trace, row=1, col=1)
+        individual_trace_indices[dist] = len(fig.data) - 1
+
     # Gap subplot (main only for simplicity)
     gap = egg_agg["單價中位數"].values - prot_agg["單價中位數"].values
     fig.add_trace(go.Scatter(
@@ -200,11 +244,11 @@ def build_dashboard(egg_agg, prot_agg, egg_individuals, egg_price_by_year, prot_
             font=dict(size=9.5),
             bgcolor="rgba(255,255,255,0.9)"
         ),
-        margin=dict(l=55, r=145, t=35, b=50),   # extra right margin for vertical legend
+        margin=dict(l=50, r=140, t=50, b=45),   # increased top margin to prevent title overlap
         title=dict(
             text="<b>2015–2025 蛋黃區 vs 蛋白區 單價中位數變化</b>",
             x=0.5, xanchor="center",
-            font=dict(size=18, color="#1D3557")
+            font=dict(size=15, color="#1D3557")
         ),
         hovermode="closest"
     )
@@ -214,18 +258,23 @@ def build_dashboard(egg_agg, prot_agg, egg_individuals, egg_price_by_year, prot_
     fig.update_yaxes(title_text="差距（元/坪）", row=2, col=1)
     fig.update_yaxes(title_text="交易筆數", row=3, col=1)
 
-    # Annotation for definition
+    # Reduce subplot title size to reduce top crowding
+    fig.update_annotations(selector={"text": "單價中位數時間序列（蛋黃區 vs 蛋白區）"}, font=dict(size=11))
+    fig.update_annotations(selector={"text": "蛋黃區相對蛋白區的單價差距（元/坪）"}, font=dict(size=11))
+    fig.update_annotations(selector={"text": "每年交易筆數對比"}, font=dict(size=11))
+
+    # Annotation for definition (moved lower and smaller to avoid title overlap)
     fig.add_annotation(
-        text="<b>紅線 = 蛋黃區總體</b>（9區預先固定）<br>旁邊虛線 = 各行政區個別走勢",
+        text="<b>紅線</b>=蛋黃總體　虛線=個別行政區",
         xref="paper", yref="paper",
-        x=0.015, y=0.97,
+        x=0.015, y=0.88,
         showarrow=False,
-        font=dict(size=9.5, color="#222"),
+        font=dict(size=8, color="#444"),
         align="left",
         bordercolor=COLOR_EGG_AGG,
-        borderwidth=1.5,
-        borderpad=5,
-        bgcolor="rgba(255,250,250,0.95)"
+        borderwidth=0.5,
+        borderpad=2,
+        bgcolor="rgba(255,250,250,0.85)"
     )
 
     # Convert to HTML
@@ -236,7 +285,7 @@ def build_dashboard(egg_agg, prot_agg, egg_individuals, egg_price_by_year, prot_
     )
 
     # Districts for checkboxes
-    priority_protein = ["板橋區", "永和區", "三重區", "中和區", "新店區", "淡水區", "林口區"]
+    priority_protein = PRIORITY_PROTEIN  # use the constant defined at top
 
     # Build nicer grouped checkboxes
     checkbox_html = ""
@@ -263,25 +312,25 @@ def build_dashboard(egg_agg, prot_agg, egg_individuals, egg_price_by_year, prot_
         </label>
         """
 
+    # Pass the correct trace indices to JS for reliable toggling
+    trace_index_json = json.dumps(individual_trace_indices)
+
     extra_js = f"""
 <script>
 (function() {{
-    const eggDistricts = {json.dumps(egg_districts)};
+    const traceIndexMap = {trace_index_json};
 
     function updateVisibility() {{
         const checkboxes = document.querySelectorAll('.dist-toggle');
         checkboxes.forEach(cb => {{
             const name = cb.getAttribute('data-name');
-            const type = cb.getAttribute('data-type');
             const visible = cb.checked;
+            const idx = traceIndexMap[name];
 
-            if (type === 'egg') {{
-                const idx = eggDistricts.indexOf(name) + 2;
-                if (idx >= 2) {{
-                    Plotly.restyle('8e98ea59-45f5-4fea-b3a6-730d88820e0e', {{visible: visible ? true : 'legendonly'}}, idx);
-                }}
-            }} 
-            // For protein districts, toggling is visual only in this version (checkbox state is kept for future enhancement)
+            if (typeof idx === 'number') {{
+                // Use the exact index recorded when the trace was added
+                Plotly.restyle(document.querySelector('.plotly-graph-div'), {{visible: visible ? true : 'legendonly'}}, idx);
+            }}
         }});
     }}
 
@@ -289,20 +338,20 @@ def build_dashboard(egg_agg, prot_agg, egg_individuals, egg_price_by_year, prot_
         setTimeout(function() {{
             const checkboxes = document.querySelectorAll('.dist-toggle');
             checkboxes.forEach(cb => cb.addEventListener('change', updateVisibility));
-        }}, 1500);
+        }}, 1200);
     }});
 }})();
 </script>
 """
 
     controls = f"""
-<div style="max-width:1100px; margin:10px auto 8px; padding:12px 16px; background:#F8F9FA; border:1px solid #DEE2E6; border-radius:8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-size:12.5px;">
-    <div style="margin-bottom:6px; font-size:13.5px; color:#333; font-weight:500;">
-        打炒房 + 升息後，市中心精華區跟外圍區的房價差距，是縮小了還是拉大了？
+<div style="max-width:1100px; margin:20px auto 10px; padding:14px 18px; background:#fafafa; border:1px solid #e0e0e0; border-radius:8px; font-size:12.5px;">
+    <div style="font-weight:600; margin-bottom:8px; color:#222; font-size:13px;">
+        控制顯示（點擊下方核取方塊即可切換）
     </div>
     {checkbox_html}
-    <div style="margin-top:8px; font-size:11px; color:#666; border-top:1px solid #E9ECEF; padding-top:6px;">
-        提示：蛋黃區個別行政區預設以虛線顯示在紅線附近，可勾選隱藏。其他行政區可勾選新增比較。
+    <div style="margin-top:10px; font-size:11px; color:#666; border-top:1px dashed #ddd; padding-top:8px;">
+        提示：蛋黃區預設顯示（虛線），可取消勾選隱藏。其他行政區勾選後會新增比較線。
     </div>
 </div>
 """
@@ -314,17 +363,19 @@ def build_dashboard(egg_agg, prot_agg, egg_individuals, egg_price_by_year, prot_
 </div>
 """
 
-    final_html = html.replace("</body>", controls + extra_js + source + "\n</body>")
+    # Insert controls BELOW the chart (after the Plotly div) for better usability
+    # We insert it right before the closing </body>, but after the chart
+    final_html = html.replace("</body>", extra_js + controls + source + "\n</body>")
 
     return final_html
 
 
 def main():
     print("Loading data...")
-    egg_agg, prot_agg, egg_individuals, egg_price_by_year, prot_price_by_year, egg_districts, egg_def = load_data()
+    egg_agg, prot_agg, egg_individuals, protein_individuals, egg_price_by_year, prot_price_by_year, egg_districts, egg_def = load_data()
 
     print("Building clean interactive dashboard...")
-    html = build_dashboard(egg_agg, prot_agg, egg_individuals, egg_price_by_year, prot_price_by_year, egg_districts, egg_def)
+    html = build_dashboard(egg_agg, prot_agg, egg_individuals, protein_individuals, egg_price_by_year, prot_price_by_year, egg_districts, egg_def)
 
     out_path = Path(OUTPUT_HTML)
     out_path.write_text(html, encoding="utf-8")

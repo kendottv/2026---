@@ -145,12 +145,16 @@ def create_figure3_before_after(egg, protein):
     protein_pre = protein.loc[protein_pre_mask, "median_price"].mean()
     protein_post = protein.loc[protein_post_mask, "median_price"].mean()
 
-    categories = ["蛋黃區\n(2019-2021)", "蛋黃區\n(2023-2025)",
-                  "蛋白區\n(2019-2021)", "蛋白區\n(2023-2025)"]
-    values = [egg_pre, egg_post, protein_pre, protein_post]
-    colors = [COLOR_EGG, COLOR_EGG, COLOR_PROTEIN, COLOR_PROTEIN]
+    # Better grouping for before/after comparison:
+    # Group by time period (政策前 | 政策後) instead of by district type
+    # This makes the temporal contrast much clearer
+    x_positions = [0, 1, 3, 4]   # pre group at 0-1, post group at 3-4 (with gap in between)
+    labels = ["蛋黃區\n(2019-2021)", "蛋白區\n(2019-2021)",
+              "蛋黃區\n(2023-2025)", "蛋白區\n(2023-2025)"]
+    values = [egg_pre, protein_pre, egg_post, protein_post]
+    colors = [COLOR_EGG, COLOR_PROTEIN, COLOR_EGG, COLOR_PROTEIN]
 
-    bars = ax.bar(categories, values, color=colors, edgecolor="black", linewidth=0.6, width=0.65)
+    bars = ax.bar(x_positions, values, color=colors, edgecolor="black", linewidth=0.6, width=0.7)
 
     # Add value labels on bars
     for bar, val in zip(bars, values):
@@ -161,27 +165,45 @@ def create_figure3_before_after(egg, protein):
                     textcoords="offset points",
                     ha="center", va="bottom", fontsize=10, fontweight="bold")
 
-    # Add gap annotation
+    # Add gap annotation - highlight the post-period gap on the right side
+    # This clearly shows the enlarged gap after the policy (the "extra protruding part")
     gap_pre = egg_pre - protein_pre
     gap_post = egg_post - protein_post
-    ax.annotate("", xy=(1, egg_post), xytext=(1, protein_post),
-                arrowprops=dict(arrowstyle="<->", color=COLOR_ACCENT, lw=2))
-    ax.text(1.15, (egg_post + protein_post) / 2, f"差距\n+{gap_post - gap_pre:,.0f}",
-            fontsize=9, color=COLOR_ACCENT, fontweight="bold")
+
+    # Give space on the right for the gap indicator + group labels
+    ax.set_xlim(-0.5, 5.2)
+
+    # Add group labels for time periods (placed above the plot area)
+    top_y = max(values) * 1.18
+    ax.text(0.5, top_y, "政策前", ha='center', fontsize=11, fontweight='bold', color='#555')
+    ax.text(3.5, top_y, "政策後", ha='center', fontsize=11, fontweight='bold', color='#555')
+
+    # Vertical double arrow for the post gap (now at x=3 and x=4)
+    right_x = 4.65
+    ax.annotate('', xy=(right_x, protein_post), xytext=(right_x, egg_post),
+                arrowprops=dict(arrowstyle='<->', color=COLOR_EGG, lw=2.2))
+    ax.text(right_x + 0.12, (egg_post + protein_post) / 2,
+            f'政策後差距\n+{gap_post - gap_pre:,.0f}',
+            fontsize=9, color=COLOR_EGG, fontweight="bold", va='center')
 
     ax.set_title("政策前後（2019-2021 vs 2023-2025）單價中位數比較", fontsize=14, fontweight="bold", pad=10)
     ax.set_ylabel("平均單價中位數（元/坪）", fontsize=11)
-    ax.set_ylim(0, max(values) * 1.15)
+
+    # Increase upper y-limit to make room for the "政策前 / 政策後" labels above the bars
+    ax.set_ylim(0, max(values) * 1.28)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    # Legend
+    # Legend - moved outside to the right to avoid overlapping top labels and right-side text
     egg_patch = mpatches.Patch(color=COLOR_EGG, label="蛋黃區")
     protein_patch = mpatches.Patch(color=COLOR_PROTEIN, label="蛋白區")
-    ax.legend(handles=[egg_patch, protein_patch], loc="upper left")
+    ax.legend(handles=[egg_patch, protein_patch], 
+              loc='upper left', 
+              bbox_to_anchor=(1.02, 1.0))
 
     add_source_note(fig, ax)
-    plt.tight_layout(rect=[0, 0.08, 1, 0.98])
+    # Give more headroom at the top for the "政策前 / 政策後" labels
+    plt.tight_layout(rect=[0, 0.08, 0.82, 0.93])
 
     filepath = OUTPUT_DIR / "fig3_before_after.png"
     plt.savefig(filepath, bbox_inches="tight", facecolor="white")
